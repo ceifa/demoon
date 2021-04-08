@@ -1,4 +1,4 @@
-const { decorate } = require('wasmoon')
+const { decorate, decorateUserData } = require('wasmoon')
 
 const keywords = [
     "and", "break", "do", "else", "elseif",
@@ -9,42 +9,57 @@ const keywords = [
 
 const proxy = {
     __index: (t, k) => {
-        let value = t[k]
+        let value = t.instance[k]
 
         if (value === undefined && typeof k === 'string') {
             const possibleExpectedKey = k.substring(1)
-            if (keywords.includes(possibleExpectedKey) && t[possibleExpectedKey]) {
-                value = t[possibleExpectedKey]
+            if (keywords.includes(possibleExpectedKey) && t.instance[possibleExpectedKey]) {
+                value = t.instance[possibleExpectedKey]
             }
         }
 
         if (['object', 'function'].includes(typeof value)) {
             if (typeof value === 'function') {
-                value.__lua_self = t
+                value.__lua_self = t.instance
             }
 
-            return decorate(value, { reference: true, metatable: proxy })
+            return decorate(
+                {
+                    instance: decorateUserData(value, { reference: true }),
+                },
+                { metatable: proxy },
+            )
         }
 
         return value
     },
     __newindex: (t, k, v) => {
-        t[k] = v
+        t.instance[k] = v
     },
     __call: (t, ...args) => {
         // Called with the : syntax, let's bind this
-        if (args[0] === t.__lua_self) {
-            t = t.bind(t.__lua_self)
+        if (args[0].instance === t.instance.__lua_self) {
+            t = t.instance.bind(t.instance.__lua_self)
             delete args[0]
             args = args.slice(1)
+        } else {
+            t = t.instance
         }
 
         args = args.map(arg => {
+            if (arg.instance !== undefined) {
+                arg = arg.instance
+            }
             if (typeof arg === 'function') {
                 return (...luaFunctionArgs) => {
                     const fixedLuaFunctionArgs = luaFunctionArgs.map(luaFunctionArg => {
                         if (['object', 'function'].includes(typeof luaFunctionArg)) {
-                            return decorate(luaFunctionArg, { reference: true, metatable: proxy })
+                            return decorate(
+                                {
+                                    instance: decorateUserData(luaFunctionArg, { reference: true }),
+                                },
+                                { metatable: proxy },
+                            )
                         }
 
                         return luaFunctionArg
@@ -59,23 +74,31 @@ const proxy = {
 
         delete t.__lua_self
 
-        const value = t(...args)
+        let value = t(...args)
+        if (Buffer.isBuffer(value)) {
+            value = value.toString()
+        }
 
         if (['object', 'function'].includes(typeof value) && value !== Promise.resolve(value)) {
-            return decorate(value, { reference: true, metatable: proxy })
+            return decorate(
+                {
+                    instance: decorateUserData(value, { reference: true }),
+                },
+                { metatable: proxy },
+            )
         }
 
         return value
     },
     __tostring: (t) => {
-        const value = t
+        const value = t.instance
         return value.toString?.() ?? typeof value
     },
     __len: (t) => {
-        return t.lenght ?? 0
+        return t.instance.length ?? 0
     },
     __pairs: (t) => {
-        const value = t
+        const value = t.instance
         const keys = Object.getOwnPropertyNames(value)
         let i = 0
         return new MultiReturn((ob, last) => {
@@ -85,7 +108,7 @@ const proxy = {
         }, t, undefined)
     },
     __ipairs: (t) => {
-        const value = t
+        const value = t.instance
 
         const js_inext = (t, i) => {
             i = i + 1
@@ -98,7 +121,7 @@ const proxy = {
         return js_inext, value, -1
     },
     __eq: (t1, t2) => {
-        return t1 === t2
+        return t1.instance === t2.instance
     },
 }
 

@@ -1,4 +1,4 @@
-const { LuaFactory, decorate } = require('wasmoon')
+const { LuaFactory, decorate, decorateUserData } = require('wasmoon')
 const path = require('path')
 const { walk } = require('./file')
 const fs = require('fs').promises
@@ -19,20 +19,26 @@ const start = async (entryFile) => {
     const lua = await factory.createEngine({ injectObjects: true })
 
     lua.global.set('new', constructor => new constructor)
-    lua.global.set('global', decorate(global, {
-        reference: true,
-        metatable: proxy
-    }))
+
+    lua.global.set('global', decorate(
+        {
+            instance: decorateUserData(global, { reference: true }),
+        },
+        { metatable: proxy },
+    ))
+
     lua.global.set('mountFile', factory.mountFileSync.bind(factory))
     lua.global.set('jsRequire', (modulename, metaDirectory) => {
         if (modulename.startsWith('.')) {
             modulename = path.resolve(metaDirectory, '..', modulename)
         }
 
-        return decorate(require(modulename), {
-            reference: true,
-            metatable: proxy
-        })
+        return decorate(
+            {
+                instance: decorateUserData(require(modulename), { reference: true }),
+            },
+            { metatable: proxy },
+        )
     })
 
     const module = await factory.getModule()
