@@ -51,6 +51,11 @@ table.insert(package.searchers, function(moduleName)
     if success then return function() return result end end
 end)
 
+-- replace the origin getenv by the nodejs one
+function os.getenv(varname)
+    return process.env[varname]
+end
+
 -- set the nodejs global as fallback to default lua global
 setmetatable(_G, {
     __index = function(t, k) return global[k] end

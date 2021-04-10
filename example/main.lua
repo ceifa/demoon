@@ -1,3 +1,4 @@
+#!/usr/bin/env demoon
 -- you can require JS module files
 local jssleep = require('./sleep.js')
 -- you can require node modules
@@ -16,8 +17,7 @@ http.createServer(async(function (req, res)
     jssleep(1000):await()
 
     res:write('Hello World!'); -- write a response to the client
-    -- because end is a lua keyword you have to put the '_'
-    res:_end(); -- end the response
+    res['end'](); -- end the response
 end)):listen(port); -- the server object listens on port 8080
 
 print('Your server is running on port ' .. port .. '!')
