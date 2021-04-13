@@ -1,30 +1,29 @@
 local path = jsRequire("path")
 local fs = jsRequire("fs")
 
-function tick(co)
-    if coroutine.status(co) == "suspended" then
-        coroutine.resume(co)
-        setImmediate(tick, co)
-    end
-end
-
 -- async function to bound awaits
 function async(callback)
     return function(...)
-        local varargs = {...}
+        local co = coroutine.create(callback)
+        local safe, result = coroutine.resume(co, ...)
 
         return Promise.create(function(resolve, reject)
-            local co = coroutine.create(function()
-                local safe, args = pcall(callback, table.unpack(varargs))
-
-                if safe then
-                    resolve(args)
-                else
-                    reject(args)
+            local function step()
+                if coroutine.status(co) == "dead" then
+                    local send = safe and resolve or reject
+                    return send(result)
                 end
-            end)
 
-            tick(co)
+                safe, result = coroutine.resume(co)
+
+                if safe and result == Promise.resolve(result) then
+                    result:finally(step)
+                else
+                    step()
+                end
+            end
+
+            result:finally(step)
         end)
     end
 end
