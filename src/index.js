@@ -1,35 +1,39 @@
 const { LuaFactory } = require('wasmoon')
 const path = require('path')
-const { walk } = require('./file')
 const fs = require('fs').promises
 
-const registerDirectory = async (factory, dir) => {
-    for await (const file of walk(dir)) {
-        await factory.mountFile(file, await fs.readFile(file))
-    }
-}
-
 const start = async (entryFile) => {
-    const factory = new LuaFactory()
+    const factory = new LuaFactory(undefined, process.env)
 
-    await factory.mountFile(path.resolve(process.cwd(), entryFile), await fs.readFile(entryFile))
-    await registerDirectory(factory, path.resolve(__dirname, "std"))
+    const fullEntryFile = path.resolve(process.cwd(), entryFile)
+    const fullStdFile = path.resolve(__dirname, "std.lua")
 
-    const lua = await factory.createEngine({ injectObjects: true })
+    await factory.mountFile(fullEntryFile, await fs.readFile(fullEntryFile))
+    await factory.mountFile(fullStdFile, await fs.readFile(fullStdFile))
 
-    lua.global.set('new', (constructor, ...args) => new constructor(...args))
-    lua.global.set('global', global)
-    lua.global.set('mountFile', factory.mountFileSync.bind(factory))
-    lua.global.set('jsRequire', (modulename, metaDirectory) => {
-            if (modulename.startsWith('.')) {
-                modulename = path.resolve(metaDirectory, '..', modulename)
-            }
+    const engine = await factory.createEngine({ injectObjects: true })
 
-            return require(modulename)
-        })
+    engine.global.set('new', (constructor, ...args) => new constructor(...args))
+    engine.global.set('global', global)
+    engine.global.set('mountFile', factory.mountFileSync.bind(factory))
+    engine.global.set('jsRequire', (modulename, metaDirectory) => {
+        if (modulename.startsWith('.')) {
+            modulename = path.resolve(metaDirectory, '..', modulename)
+        }
 
-    await lua.doFile(path.resolve(__dirname, "std/main.lua"))
-    await lua.doFile(path.resolve(process.cwd(), entryFile))
+        return require(modulename)
+    })
+
+    try {
+        engine.doFileSync(fullStdFile)
+    
+        const thread = engine.global.newThread()
+        thread.loadFile(fullEntryFile)
+    
+        await thread.run(0)
+    } catch (e) {
+        console.error(e)
+    }
 }
 
 module.exports = { start }

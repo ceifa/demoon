@@ -1,3 +1,13 @@
+local path = jsRequire("path")
+local fs = jsRequire("fs")
+
+function tick(co)
+    if coroutine.status(co) == "suspended" then
+        coroutine.resume(co)
+        setImmediate(tick, co)
+    end
+end
+
 -- async function to bound awaits
 function async(callback)
     return function(...)
@@ -14,16 +24,7 @@ function async(callback)
                 end
             end)
 
-            function tick()
-                local status = coroutine.status(co)
-
-                if status == "suspended" then
-                    coroutine.resume(co)
-                    setImmediate(tick)
-                end
-            end
-
-            tick()
+            tick(co)
         end)
     end
 end
@@ -31,9 +32,6 @@ end
 -- package searcher to handle lua files on the fly
 table.insert(package.searchers, function(moduleName)
     if moduleName:sub(-4) == ".lua" then
-        local path = jsRequire("path")
-        local fs = jsRequire("fs")
-
         local calledDirectory = debug.getinfo(3).short_src
         local luafile = path.resolve(calledDirectory, "..", moduleName)
 
@@ -50,11 +48,6 @@ table.insert(package.searchers, function(moduleName)
     local success, result = pcall(jsRequire, moduleName, debug.getinfo(3).short_src)
     if success then return function() return result end end
 end)
-
--- replace the origin getenv by the nodejs one
-function os.getenv(varname)
-    return process.env[varname]
-end
 
 -- set the nodejs global as fallback to default lua global
 setmetatable(_G, {

@@ -44,8 +44,7 @@ http.createServer(async(function (req, res)
     sleep(1000):await()
 
     res:write('Hello World!');
-    -- because end is a lua keyword you have to put the '_'
-    res:_end();
+    res['end']();
 end)):listen(port);
 
 print('Your server is running on port ' .. port .. '!')
