@@ -13,6 +13,8 @@ const start = async (entryFile) => {
 
     const engine = await factory.createEngine({ injectObjects: true })
 
+    engine.global.set('typeof', value => typeof value)
+    engine.global.set('instanceof', (value, type) => value instanceof type)
     engine.global.set('new', (constructor, ...args) => new constructor(...args))
     engine.global.set('global', global)
     engine.global.set('mountFile', factory.mountFileSync.bind(factory))
