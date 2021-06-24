@@ -23,7 +23,7 @@ const start = async (entryFile) => {
             modulename = path.resolve(metaDirectory, '..', modulename)
         }
 
-        return require(modulename)
+        return module.require(modulename);
     })
 
     try {
