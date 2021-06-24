@@ -19,11 +19,15 @@ const start = async (entryFile) => {
     engine.global.set('global', global)
     engine.global.set('mountFile', factory.mountFileSync.bind(factory))
     engine.global.set('jsRequire', (modulename, metaDirectory) => {
-        if (modulename.startsWith('.')) {
-            modulename = path.resolve(metaDirectory, '..', modulename)
+        if (metaDirectory) {
+            if (modulename.startsWith('.')) {
+                modulename = path.resolve(metaDirectory, '..', modulename)
+            }
+
+            modulename = require.resolve(modulename, { paths: [fullEntryFile] })
         }
 
-        return module.require(modulename);
+        return module.require(modulename)
     })
 
     try {

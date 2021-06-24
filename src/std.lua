@@ -8,14 +8,18 @@ function async(callback)
         local safe, result = coroutine.resume(co, ...)
 
         return Promise.create(function(resolve, reject)
-            local function step()
+            local checkresult
+            local step = function()
                 if coroutine.status(co) == "dead" then
                     local send = safe and resolve or reject
                     return send(result)
                 end
 
                 safe, result = coroutine.resume(co)
+                checkresult()
+            end
 
+            checkresult = function()
                 if safe and result == Promise.resolve(result) then
                     result:finally(step)
                 else
@@ -23,7 +27,7 @@ function async(callback)
                 end
             end
 
-            result:finally(step)
+            checkresult()
         end)
     end
 end
