@@ -3,6 +3,6 @@
 const { start } = require('../src/index');
 
 const snippets = process.argv.splice(2);
-const [entryFile] = snippets
+const [entryFile, ...arg] = snippets
 
-start(entryFile)
+start(entryFile, arg)

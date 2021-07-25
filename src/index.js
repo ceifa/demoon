@@ -1,8 +1,9 @@
-const { LuaFactory } = require('wasmoon')
+const { LuaFactory, LuaMultiReturn } = require('wasmoon')
 const path = require('path')
-const fs = require('fs').promises
+const FunctionClassTypeExtension = require('./legacyclasses')
+const fs = require('fs/promises')
 
-const start = async (entryFile) => {
+const start = async (entryFile, arg) => {
     const factory = new LuaFactory(undefined, process.env)
 
     const fullEntryFile = path.resolve(process.cwd(), entryFile)
@@ -13,6 +14,8 @@ const start = async (entryFile) => {
 
     const engine = await factory.createEngine({ injectObjects: true })
 
+    engine.global.registerTypeExtension(10, new FunctionClassTypeExtension)
+    engine.global.set('arg', arg)
     engine.global.set('typeof', value => typeof value)
     engine.global.set('instanceof', (value, type) => value instanceof type)
     engine.global.set('new', (constructor, ...args) => new constructor(...args))
