@@ -15,8 +15,8 @@ http.createServer(async(function (req, res)
     -- you can await inside async bounded functions
     jssleep(1000):await()
 
-    res:write('Hello World!');
-    res['end']();
-end)):listen(port);
+    res:write('Hello World!')
+    res['end']()
+end)):listen(port)
 
 print('Your server is running on port ' .. port .. '!')
