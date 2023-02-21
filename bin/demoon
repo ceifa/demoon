@@ -1,8 +1,14 @@
 #!/usr/bin/env node
 
-const { start } = require('../src/index');
+const Demoon = require('../src/index');
 
 const snippets = process.argv.splice(2);
 const [entryFile, ...arg] = snippets
 
-start(entryFile, arg)
+const demoon = new Demoon();
+demoon.getLuaEngine()
+    .then(engine => {
+        engine.global.set('arg', arg)
+    }).then(async () => {
+        await demoon.runFile(entryFile)
+    })

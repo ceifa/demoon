@@ -1,48 +1,80 @@
-const { LuaFactory, LuaMultiReturn } = require('wasmoon')
+const { LuaFactory, LuaEngine } = require('wasmoon')
 const path = require('path')
 const FunctionClassTypeExtension = require('./legacyclasses')
 const fs = require('fs/promises')
 
-const start = async (entryFile, arg) => {
-    const factory = new LuaFactory(undefined, process.env)
+module.exports = class {
+    /** @returns {Promise<LuaEngine>} */
+    async getLuaEngine() {
+        await this.#setupIfNeeded()
+        return this.#engine
+    }
 
-    const fullEntryFile = path.resolve(process.cwd(), entryFile)
-    const fullStdFile = path.resolve(__dirname, "std.lua")
+    /**
+     *  @param {string} file
+     *  @returns {Promise<void>}
+    */
+    async runFile(file) {
+        await this.#setupIfNeeded()
 
-    await factory.mountFile(fullEntryFile, await fs.readFile(fullEntryFile))
-    await factory.mountFile(fullStdFile, await fs.readFile(fullStdFile))
+        this.#factory.mountFileSync(await this.#factory.getLuaModule(), file, await fs.readFile(file))
 
-    const engine = await factory.createEngine({ injectObjects: true })
+        try {
+            const thread = this.#engine.global.newThread()
+            thread.loadFile(file)
 
-    engine.global.registerTypeExtension(10, new FunctionClassTypeExtension)
-    engine.global.set('arg', arg)
-    engine.global.set('typeof', value => typeof value)
-    engine.global.set('instanceof', (value, type) => value instanceof type)
-    engine.global.set('new', (constructor, ...args) => new constructor(...args))
-    engine.global.set('global', global)
-    engine.global.set('mountFile', factory.mountFileSync.bind(factory))
-    engine.global.set('jsRequire', (modulename, metaDirectory) => {
-        if (metaDirectory) {
-            if (modulename.startsWith('.')) {
-                modulename = path.resolve(metaDirectory, '..', modulename)
+            this.#engine.global.set('jsRequire', (modulename, metaDirectory) => {
+                if (metaDirectory) {
+                    if (modulename.startsWith('.')) {
+                        modulename = path.resolve(metaDirectory, '..', modulename)
+                    }
+
+                    modulename = require.resolve(modulename, { paths: [file] })
+                }
+
+                return module.require(modulename)
+            })
+
+            await thread.run(0)
+        } catch (e) {
+            console.error(e)
+        }
+    }
+
+    /** @type {LuaEngine | undefined} */
+    #engine
+
+    /** @type {LuaFactory | undefined} */
+    #factory
+
+    async #setupIfNeeded() {
+        if (this.#factory) return
+
+        this.#factory = new LuaFactory(undefined, process.env)
+        const luamodule = await this.#factory.getLuaModule()
+
+        const fullStdFile = path.resolve(__dirname, "std.lua")
+        this.#factory.mountFileSync(luamodule, fullStdFile, await fs.readFile(fullStdFile))
+
+        this.#engine = await this.#factory.createEngine({ injectObjects: true })
+
+        this.#engine.global.registerTypeExtension(10, new FunctionClassTypeExtension)
+        this.#engine.global.set('typeof', value => typeof value)
+        this.#engine.global.set('instanceof', (value, type) => value instanceof type)
+        this.#engine.global.set('new', (constructor, ...args) => new constructor(...args))
+        this.#engine.global.set('global', global)
+        this.#engine.global.set('mountFile', (path, content) => this.#factory.mountFileSync(luamodule, path, content))
+        this.#engine.global.set('jsRequire', (modulename, metaDirectory) => {
+            if (metaDirectory) {
+                if (modulename.startsWith('.')) {
+                    modulename = path.resolve(metaDirectory, '..', modulename)
+                }
+
+                modulename = require.resolve(modulename)
             }
 
-            modulename = require.resolve(modulename, { paths: [fullEntryFile] })
-        }
-
-        return module.require(modulename)
-    })
-
-    try {
-        engine.doFileSync(fullStdFile)
-    
-        const thread = engine.global.newThread()
-        thread.loadFile(fullEntryFile)
-    
-        await thread.run(0)
-    } catch (e) {
-        console.error(e)
+            return module.require(modulename)
+        })
+        this.#engine.doFileSync(fullStdFile)
     }
 }
-
-module.exports = { start }

@@ -1,6 +1,6 @@
 {
   "name": "demoon",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Lua + Node",
   "main": "src/index.js",
   "bin": {
@@ -13,6 +13,6 @@
     "lua"
   ],
   "dependencies": {
-    "wasmoon": "1.12.1"
+    "wasmoon": "1.15.0"
   }
 }

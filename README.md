@@ -2,6 +2,8 @@
 
 You love Lua but the runtime API is very weak and you don't want to handle and learn a lot of different luarock libraries? You came at the right place! This project aims to offer the bests of **Lua** and **NodeJS** together.
 
+> Don't use this in production!
+
 ## Usage
 
 You don't need `lua` installed to run demoon, but you need `node` and npm as well, firstly, install demoon globally:
