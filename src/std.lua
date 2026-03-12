@@ -32,20 +32,6 @@ function async(callback)
     end
 end
 
--- package searcher to handle lua files on the fly
-table.insert(package.searchers, function(moduleName)
-    if moduleName:sub(-4) == ".lua" then
-        local calledDirectory = debug.getinfo(3).short_src
-        local luafile = path.resolve(calledDirectory, "..", moduleName)
-
-        local success, content = pcall(fs.readFileSync, luafile)
-        if success and content then
-            mountFile(luafile, content)
-            return loadfile(luafile)
-        end
-    end
-end)
-
 -- package searcher to handle JS modules
 table.insert(package.searchers, function(moduleName)
     local success, result = pcall(jsRequire, moduleName, debug.getinfo(3).short_src)

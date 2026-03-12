@@ -1,14 +1,12 @@
 #!/usr/bin/env node
 
-const Demoon = require('../src/index');
+import Demoon from '../src/index.js'
 
-const snippets = process.argv.splice(2);
+const snippets = process.argv.splice(2)
 const [entryFile, ...arg] = snippets
 
-const demoon = new Demoon();
-demoon.getLuaEngine()
-    .then(engine => {
-        engine.global.set('arg', arg)
-    }).then(async () => {
-        await demoon.runFile(entryFile)
-    })
+const demoon = new Demoon()
+const engine = await demoon.getLuaEngine()
+engine.global.set('arg', arg)
+
+await demoon.runFile(entryFile)

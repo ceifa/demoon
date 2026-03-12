@@ -1,10 +1,14 @@
 {
   "name": "demoon",
   "version": "0.0.9",
+  "type": "module",
   "description": "Lua + Node",
   "main": "src/index.js",
   "bin": {
     "demoon": "bin/demoon"
+  },
+  "scripts": {
+    "example": "node --experimental-require-module bin/demoon ./example/main.lua"
   },
   "author": "ceifa",
   "repository": "github:ceifa/demoon",

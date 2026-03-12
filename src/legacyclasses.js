@@ -1,4 +1,4 @@
-const { decorateProxy, LuaTypeExtension } = require("wasmoon");
+import { decorateProxy, LuaTypeExtension } from 'wasmoon'
 
 const functionClasses = [
     Buffer,
@@ -8,7 +8,7 @@ const functionClasses = [
     Number,
 ]
 
-module.exports = class extends LuaTypeExtension {
+export default class extends LuaTypeExtension {
     constructor(thread, injectObject) {
         super(thread, 'js_functionclass')
     }

@@ -1,10 +1,10 @@
 #!/usr/bin/env demoon
 -- you can require node modules (package.json/node_modules works as well)
-local http = require('http')
+local http = require('node:http')
 
 -- you can require js modules and lua files
 local jssleep = require('./sleep.js')
-local luasleep = require('sleep.lua')
+local luasleep = require('sleep')
 
 local port = os.getenv('PORT') or 8080
 
